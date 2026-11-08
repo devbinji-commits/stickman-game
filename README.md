@@ -1,13 +1,10 @@
-# Stickman Run — Ursina
+# Stickman Arena — Ursina
 
-Petit jeu de course 3D où le stickman doit éviter les obstacles en changeant de voie ou en sautant. Le projet utilise **Ursina uniquement** pour le jeu : aucune dépendance à Pygame.
+Un petit jeu de combat local en 2.5D fait avec **Ursina**. Deux personnages stickman articulés (tête, bras, jambes, vêtements et visage) se battent dans une arène. L'adversaire est contrôlé par une IA simple. Le projet n'utilise **pas Pygame** et ne nécessite aucune image externe.
 
-## Prérequis
+## Installation
 
-- Python 3.9 ou plus récent
-- Une machine compatible avec Ursina/Panda3D
-
-## Installation et lancement
+Prérequis : Python 3.9 ou plus récent.
 
 ```bash
 python -m pip install -r requirements.txt
@@ -16,8 +13,10 @@ python main.py
 
 ## Commandes
 
-- **← / →** ou **A / D** : changer de voie
-- **Espace**, **↑** ou **W** : sauter
+- **A / D** ou **← / →** : se déplacer
+- **Espace** : sauter
+- **J** ou **F** : frapper
+- **K** ou **Maj** : bloquer
 - **Échap** : quitter
 
-Le score augmente avec le temps, la vitesse augmente progressivement et le meilleur score est enregistré dans `save.json`.
+Les barres de vie indiquent l'état des combattants. Après une victoire ou une défaite, le round suivant démarre automatiquement.

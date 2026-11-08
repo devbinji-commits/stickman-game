@@ -1,6 +1,7 @@
-"""Stickman Run — petit jeu de course 3D réalisé avec Ursina."""
+"""Stickman Arena — jeu de combat local en 2.5D, créé avec Ursina."""
 
 import json
+import math
 import random
 from pathlib import Path
 
@@ -8,189 +9,267 @@ from ursina import *
 
 
 app = Ursina()
-window.title = "Stickman Run"
-window.color = color.rgb(13, 19, 38)
+window.title = "Stickman Arena"
+window.color = color.rgb(20, 25, 42)
 window.fps_counter.enabled = True
-camera.position = (0, 9, -19)
-camera.look_at(Vec3(0, 1, 3))
-camera.fov = 70
+camera.position = (0, 5.2, -19)
+camera.look_at(Vec3(0, 2.2, 0))
+camera.fov = 55
 
-LANES = (-2.4, 0, 2.4)
-PLAYER_Z = -5
-SAVE_FILE = Path(__file__).with_name("save.json")
+ARENA_LIMIT = 7.3
+SAVE_PATH = Path(__file__).with_name("save.json")
 
-
-def load_best_score():
-    try:
-        return int(json.loads(SAVE_FILE.read_text(encoding="utf-8")).get("best_score", 0))
-    except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        return 0
-
-
-def save_best_score(score):
-    try:
-        SAVE_FILE.write_text(json.dumps({"best_score": score}, indent=2), encoding="utf-8")
-    except OSError:
-        pass
+# Décor de l'arène
+Entity(model="cube", position=(0, -0.3, 0), scale=(18, 0.6, 8), color=color.rgb(48, 57, 78))
+Entity(model="cube", position=(0, 0.03, 0), scale=(15, 0.035, 6), color=color.rgb(66, 75, 96))
+for x in (-7.8, 7.8):
+    Entity(model="cube", position=(x, 1, 0), scale=(0.25, 2, 6), color=color.rgb(112, 124, 151))
+for x in range(-7, 8, 2):
+    Entity(model="cube", position=(x, 0.06, 0), scale=(0.035, 0.02, 5.7), color=color.rgb(88, 98, 120))
+Entity(model="cube", position=(0, 4.4, 4.5), scale=(22, 9, 0.2), color=color.rgb(27, 34, 54))
+for i in range(10):
+    Entity(model="sphere", position=(-8.7 + i * 1.93, 2.2 + (i % 3) * .55, 4.25), scale=(.3, .3, .15), color=color.rgb(80, 110, 158))
 
 
-# Décor fixe : piste, lignes de voie et silhouettes de bâtiments.
-Entity(model="cube", position=(0, -0.25, 9), scale=(10, 0.5, 65), color=color.rgb(35, 43, 62))
-for lane_edge in (-1.2, 1.2):
-    Entity(model="cube", position=(lane_edge, 0.015, 9), scale=(0.045, 0.025, 65), color=color.rgb(105, 117, 143))
-Entity(model="cube", position=(0, -0.55, 9), scale=(200, 0.1, 200), color=color.rgb(17, 24, 42))
-
-for i in range(18):
-    side = -1 if i % 2 == 0 else 1
-    z = i * 5 - 8
-    height = random.uniform(3.5, 9)
-    building = Entity(
-        model="cube",
-        position=(side * random.uniform(7, 11), height / 2 - 0.2, z),
-        scale=(random.uniform(2, 4), height, random.uniform(2, 4)),
-        color=color.rgb(25, 34, 57),
-    )
-    building.collider = None
+def limb_between(entity, start, end, thickness, tint):
+    """Place un cylindre vertical entre deux articulations (coordonnées locales)."""
+    delta = end - start
+    length = max(delta.length(), 0.001)
+    entity.position = (start + end) / 2
+    entity.scale = (thickness, length, thickness)
+    entity.rotation_z = math.degrees(math.atan2(-delta.x, delta.y))
+    entity.color = tint
 
 
-# Le personnage est construit avec des formes Ursina, sans images externes.
-player = Entity(position=(LANES[1], 0, PLAYER_Z))
-Entity(model="sphere", parent=player, position=(0, 2.15, 0), scale=0.58, color=color.rgb(245, 194, 66))
-Entity(model="cube", parent=player, position=(0, 1.25, 0), scale=(0.42, 1.15, 0.3), color=color.rgb(235, 239, 247))
-left_arm = Entity(model="cube", parent=player, position=(-0.34, 1.35, 0), scale=(0.16, 0.9, 0.18), color=color.rgb(235, 239, 247))
-right_arm = Entity(model="cube", parent=player, position=(0.34, 1.35, 0), scale=(0.16, 0.9, 0.18), color=color.rgb(235, 239, 247))
-left_leg = Entity(model="cube", parent=player, position=(-0.15, 0.45, 0), scale=(0.18, 0.85, 0.2), color=color.rgb(90, 190, 255))
-right_leg = Entity(model="cube", parent=player, position=(0.15, 0.45, 0), scale=(0.18, 0.85, 0.2), color=color.rgb(90, 190, 255))
+class Fighter:
+    """Personnage stickman articulé, entièrement dessiné avec des formes Ursina."""
 
-score_text = Text(text="Score : 0", position=(-0.86, 0.45), scale=1.4, color=color.white)
-best_text = Text(text=f"Record : {load_best_score()}", position=(-0.86, 0.40), scale=1, color=color.rgb(185, 202, 230))
-help_text = Text(text="← / → ou A / D : changer de voie     ESPACE : sauter", origin=(0, 0), position=(0, -0.46), scale=0.9, color=color.white)
-message = Text(text="", origin=(0, 0), position=(0, 0.16), scale=2.2, color=color.white)
+    def __init__(self, x, shirt, pants, skin, is_player=False):
+        self.root = Entity(position=(x, 0, 0))
+        self.shirt = shirt
+        self.pants = pants
+        self.skin = skin
+        self.is_player = is_player
+        self.health = 100
+        self.facing = 1 if is_player else -1
+        self.velocity_y = 0
+        self.attack_timer = 0
+        self.attack_cooldown = 0
+        self.hit_flash = 0
+        self.walk_time = 0
+        self.blocking = False
 
-obstacles = []
-playing = False
-lane_index = 1
-jump_velocity = 0
-elapsed = 0
-spawn_timer = 0
-speed = 12
-score = 0
-best_score = load_best_score()
+        self.torso = Entity(model="cube", parent=self.root, position=(0, 1.83, 0), scale=(.47, .83, .3), color=shirt)
+        self.head = Entity(model="sphere", parent=self.root, position=(0, 2.55, 0), scale=(.54, .58, .48), color=skin)
+        # Yeux tournés vers la caméra, avec une pupille pour donner une expression.
+        for eye_x in (-.15, .15):
+            Entity(model="sphere", parent=self.root, position=(eye_x, 2.61, -.222), scale=(.075, .09, .04), color=color.white)
+            Entity(model="sphere", parent=self.root, position=(eye_x, 2.61, -.257), scale=(.035, .05, .025), color=color.black)
+        self.arm_l = Entity(model="cylinder", parent=self.root, color=shirt)
+        self.arm_r = Entity(model="cylinder", parent=self.root, color=shirt)
+        self.leg_l = Entity(model="cylinder", parent=self.root, color=pants)
+        self.leg_r = Entity(model="cylinder", parent=self.root, color=pants)
+        self.hand_l = Entity(model="sphere", parent=self.root, scale=.2, color=skin)
+        self.hand_r = Entity(model="sphere", parent=self.root, scale=.2, color=skin)
+        self.foot_l = Entity(model="cube", parent=self.root, scale=(.36, .16, .32), color=pants)
+        self.foot_r = Entity(model="cube", parent=self.root, scale=(.36, .16, .32), color=pants)
+        self.update_pose(0)
+
+    @property
+    def x(self):
+        return self.root.x
+
+    @x.setter
+    def x(self, value):
+        self.root.x = value
+
+    @property
+    def y(self):
+        return self.root.y
+
+    @y.setter
+    def y(self, value):
+        self.root.y = value
+
+    def update_pose(self, dt):
+        if dt:
+            self.walk_time += dt * (12 if abs(getattr(self, "move_amount", 0)) > .01 else 3)
+        stride = math.sin(self.walk_time) * .38 if self.y < .05 else 0
+        crouch = -.15 if self.blocking else 0
+        attack = self.attack_timer > 0
+
+        shoulder_l = Vec3(-.25, 2.12 + crouch, 0)
+        shoulder_r = Vec3(.25, 2.12 + crouch, 0)
+        hip_l = Vec3(-.13, 1.38, 0)
+        hip_r = Vec3(.13, 1.38, 0)
+        if attack:
+            fist_x = self.facing * .95
+            fist = Vec3(fist_x, 2.03, -.02)
+            mid = Vec3(self.facing * .5, 2.1, 0)
+            arm_start = shoulder_r if self.facing > 0 else shoulder_l
+            arm_entity = self.arm_r if self.facing > 0 else self.arm_l
+            hand_entity = self.hand_r if self.facing > 0 else self.hand_l
+            limb_between(arm_entity, arm_start, mid, .19, self.shirt)
+            limb_between(self.arm_l if arm_entity is self.arm_r else self.arm_r,
+                         shoulder_l if arm_entity is self.arm_r else shoulder_r,
+                         Vec3(-self.facing * .43, 1.88 + crouch, 0), .16, self.shirt)
+            hand_entity.position = fist
+            self.hand_l.position = Vec3(-self.facing * .48, 1.83 + crouch, 0) if hand_entity is self.hand_r else fist
+            self.hand_r.position = Vec3(-self.facing * .48, 1.83 + crouch, 0) if hand_entity is self.hand_l else fist
+        else:
+            left_hand = Vec3(-.48 + stride * .35, 1.6 + crouch, 0)
+            right_hand = Vec3(.48 - stride * .35, 1.6 + crouch, 0)
+            limb_between(self.arm_l, shoulder_l, left_hand, .16, self.shirt)
+            limb_between(self.arm_r, shoulder_r, right_hand, .16, self.shirt)
+            self.hand_l.position = left_hand
+            self.hand_r.position = right_hand
+
+        knee_l = Vec3(-.18 + stride, .72, 0)
+        knee_r = Vec3(.18 - stride, .72, 0)
+        ankle_l = Vec3(-.2 - stride * .6, .16, 0)
+        ankle_r = Vec3(.2 + stride * .6, .16, 0)
+        limb_between(self.leg_l, hip_l, knee_l, .17, self.pants)
+        limb_between(self.leg_r, hip_r, knee_r, .17, self.pants)
+        limb_between(self.leg_l, knee_l, ankle_l, .14, self.pants)
+        limb_between(self.leg_r, knee_r, ankle_r, .14, self.pants)
+        self.foot_l.position = ankle_l + Vec3(self.facing * .1, -.06, 0)
+        self.foot_r.position = ankle_r + Vec3(self.facing * .1, -.06, 0)
+        self.torso.y = 1.83 + crouch
+        self.head.y = 2.55 + crouch
+        self.torso.color = color.white if self.hit_flash > 0 else self.shirt
 
 
-def set_overlay(title, subtitle, button_label, action):
-    global overlay_title, overlay_subtitle, overlay_button
-    overlay_title = Text(text=title, origin=(0, 0), position=(0, 0.22), scale=2.5, color=color.rgb(245, 194, 66))
-    overlay_subtitle = Text(text=subtitle, origin=(0, 0), position=(0, 0.08), scale=1, color=color.white)
-    overlay_button = Button(text=button_label, scale=(0.24, 0.075), position=(0, -0.08), color=color.rgb(58, 112, 190), on_click=action)
+player = Fighter(-3.2, color.rgb(57, 160, 255), color.rgb(34, 65, 138), color.rgb(245, 190, 145), True)
+enemy = Fighter(3.2, color.rgb(244, 79, 91), color.rgb(129, 39, 61), color.rgb(220, 164, 120))
+
+player_name = Text("JOUEUR", parent=camera.ui, position=(-.55, .4), origin=(0, 0), scale=1.2, color=color.rgb(93, 185, 255))
+enemy_name = Text("ADVERSAIRE", parent=camera.ui, position=(.25, .4), origin=(0, 0), scale=1.2, color=color.rgb(255, 112, 119))
+player_bar_bg = Entity(parent=camera.ui, model="quad", position=(-.38, .35), scale=(.42, .035), color=color.rgb(66, 73, 91))
+enemy_bar_bg = Entity(parent=camera.ui, model="quad", position=(.38, .35), scale=(.42, .035), color=color.rgb(66, 73, 91))
+player_bar = Entity(parent=camera.ui, model="quad", position=(-.38, .35, -.01), scale=(.42, .025), color=color.rgb(70, 220, 125))
+enemy_bar = Entity(parent=camera.ui, model="quad", position=(.38, .35, -.01), scale=(.42, .025), color=color.rgb(255, 85, 95))
+score_label = Text("Victoires : 0", parent=camera.ui, position=(-.86, .46), scale=1, color=color.white)
+help_label = Text("A / D ou ← / → : bouger     ESPACE : sauter     J : frapper     K : bloquer", parent=camera.ui,
+                  origin=(0, 0), position=(0, -.46), scale=.85, color=color.white)
+message = Text("", parent=camera.ui, origin=(0, 0), position=(0, .08), scale=2.2, color=color.rgb(255, 218, 91))
+
+wins = 0
+round_over = False
+round_timer = 0
+
+def update_health_bars():
+    player_bar.scale_x = .42 * max(0, player.health) / 100
+    enemy_bar.scale_x = .42 * max(0, enemy.health) / 100
+    player_bar.x = -.59 + player_bar.scale_x / 2
+    enemy_bar.x = .17 + enemy_bar.scale_x / 2
 
 
-def clear_overlay():
-    for name in ("overlay_title", "overlay_subtitle", "overlay_button"):
-        element = globals().get(name)
-        if element:
-            destroy(element)
+def attack(attacker, target):
+    if attacker.attack_cooldown > 0 or round_over:
+        return
+    attacker.attack_timer = .24
+    attacker.attack_cooldown = .62
+    # La frappe touche uniquement à courte distance et si les personnages se font face.
+    gap = abs(attacker.x - target.x)
+    target_is_forward = (target.x - attacker.x) * attacker.facing > 0
+    if gap < 2.15 and target_is_forward and target.y < 1.15:
+        if target.blocking:
+            damage = 4
+        else:
+            damage = random.randint(10, 16)
+        target.health = max(0, target.health - damage)
+        target.hit_flash = .12
+        target.x = clamp(target.x + attacker.facing * .28, -ARENA_LIMIT, ARENA_LIMIT)
+        update_health_bars()
+        if target.health <= 0:
+            finish_round(attacker is player)
 
 
-def start_game():
-    global playing, lane_index, jump_velocity, elapsed, spawn_timer, speed, score
-    clear_overlay()
-    for obstacle in obstacles:
-        destroy(obstacle)
-    obstacles.clear()
-    lane_index = 1
-    player.x = LANES[lane_index]
-    player.y = 0
-    jump_velocity = 0
-    elapsed = 0
-    spawn_timer = 0.7
-    speed = 12
-    score = 0
-    score_text.text = "Score : 0"
-    message.text = ""
-    help_text.enabled = True
-    playing = True
-
-
-def end_game():
-    global playing, best_score
-    playing = False
-    help_text.enabled = False
-    if score > best_score:
-        best_score = score
-        save_best_score(best_score)
-        best_text.text = f"Nouveau record : {best_score}"
+def finish_round(player_won):
+    global round_over, round_timer, wins
+    round_over = True
+    round_timer = 2.2
+    if player_won:
+        wins += 1
+        score_label.text = f"Victoires : {wins}"
+        message.text = "VICTOIRE !"
+        message.color = color.rgb(255, 218, 91)
     else:
-        best_text.text = f"Record : {best_score}"
-    set_overlay("Fin de la partie", f"Score : {score}   •   Record : {best_score}", "Rejouer", start_game)
+        message.text = "DÉFAITE !"
+        message.color = color.rgb(255, 112, 119)
 
 
-def spawn_obstacle():
-    lane = random.randrange(len(LANES))
-    obstacle = Entity(
-        model="cube",
-        position=(LANES[lane], 0.72, 29),
-        scale=(1.15, 1.45, 0.9),
-        color=color.rgb(236, 83, 91),
-    )
-    obstacle.lane_index = lane
-    obstacles.append(obstacle)
+def reset_round():
+    global round_over, round_timer
+    player.health = enemy.health = 100
+    player.x, enemy.x = -3.2, 3.2
+    player.y = enemy.y = 0
+    player.velocity_y = enemy.velocity_y = 0
+    player.blocking = enemy.blocking = False
+    player.attack_timer = enemy.attack_timer = 0
+    message.text = ""
+    round_over = False
+    round_timer = 0
+    update_health_bars()
 
 
 def input(key):
-    global lane_index, jump_velocity
     if key == "escape":
         application.quit()
-    if not playing:
+    if round_over:
         return
-    if key in ("left arrow", "a"):
-        lane_index = max(0, lane_index - 1)
-    elif key in ("right arrow", "d"):
-        lane_index = min(len(LANES) - 1, lane_index + 1)
-    elif key in ("space", "up arrow", "w") and player.y <= 0.01:
-        jump_velocity = 9.5
-    player.x = LANES[lane_index]
+    if key in ("j", "f"):
+        attack(player, enemy)
+    if key == "space" and player.y <= .01:
+        player.velocity_y = 8.5
+    if key in ("k", "shift"):
+        player.blocking = True
 
 
 def update():
-    global elapsed, spawn_timer, speed, score, jump_velocity
-    if not playing:
+    global round_timer
+    dt = time.dt
+    if round_over:
+        round_timer -= dt
+        if round_timer <= 0:
+            reset_round()
         return
 
-    dt = time.dt
-    elapsed += dt
-    speed = min(24, 12 + elapsed * 0.25)
-    score = int(elapsed * 10)
-    score_text.text = f"Score : {score}"
+    # Déplacement du joueur
+    move = held_keys["d"] + held_keys["right arrow"] - held_keys["a"] - held_keys["left arrow"]
+    player.move_amount = move
+    if move:
+        player.x = clamp(player.x + move * 6 * dt, -ARENA_LIMIT, ARENA_LIMIT)
+        player.facing = 1 if move > 0 else -1
+    player.blocking = held_keys["k"] or held_keys["shift"]
 
-    # Saut avec gravité et animation de course.
-    if player.y > 0 or jump_velocity > 0:
-        jump_velocity -= 24 * dt
-        player.y = max(0, player.y + jump_velocity * dt)
-        if player.y == 0:
-            jump_velocity = 0
-    swing = math.sin(elapsed * 13) * 28
-    left_arm.rotation_z = swing
-    right_arm.rotation_z = -swing
-    left_leg.rotation_z = -swing * 0.7
-    right_leg.rotation_z = swing * 0.7
+    # Adversaire contrôlé par une IA légère : il s'approche et attaque à portée.
+    distance = abs(player.x - enemy.x)
+    enemy.facing = -1 if enemy.x > player.x else 1
+    enemy.move_amount = 0
+    if distance > 1.55:
+        enemy.move_amount = 1
+        enemy.x += enemy.facing * 2.35 * dt
+    elif enemy.attack_cooldown <= 0:
+        attack(enemy, player)
 
-    spawn_timer -= dt
-    if spawn_timer <= 0:
-        spawn_obstacle()
-        spawn_timer = random.uniform(1.0, 1.5) * max(0.65, 12 / speed)
+    for fighter in (player, enemy):
+        fighter.attack_timer = max(0, fighter.attack_timer - dt)
+        fighter.attack_cooldown = max(0, fighter.attack_cooldown - dt)
+        fighter.hit_flash = max(0, fighter.hit_flash - dt)
+        if fighter.y > 0 or fighter.velocity_y > 0:
+            fighter.velocity_y -= 22 * dt
+            fighter.y = max(0, fighter.y + fighter.velocity_y * dt)
+            if fighter.y == 0:
+                fighter.velocity_y = 0
+        fighter.update_pose(dt)
 
-    for obstacle in obstacles[:]:
-        obstacle.z -= speed * dt
-        if obstacle.z < PLAYER_Z + 0.65 and obstacle.z > PLAYER_Z - 0.4:
-            if obstacle.lane_index == lane_index and player.y < 1.05:
-                end_game()
-                return
-        if obstacle.z < -12:
-            obstacles.remove(obstacle)
-            destroy(obstacle)
+    # Empêche les deux combattants de se traverser.
+    if abs(player.x - enemy.x) < 1.0:
+        direction = 1 if player.x < enemy.x else -1
+        player.x -= direction * .025
+        enemy.x += direction * .025
 
 
-help_text.enabled = False
-set_overlay("Stickman Run", "Évite les obstacles et cours le plus longtemps possible !", "Jouer", start_game)
+update_health_bars()
 app.run()
