@@ -1,51 +1,47 @@
-"""Stickman Arena — combat 2.5D avec combattants articulés, réalisé avec Ursina."""
+"""Stickman Arena — combat cartoon 2.5D avec Ursina, sans Pygame."""
 
 import math
 import random
 
 from ursina import *
 
-
 app = Ursina()
 window.title = "Stickman Arena"
-window.color = color.rgb(13, 17, 31)
+window.color = color.rgb(16, 20, 36)
 window.fps_counter.enabled = True
 camera.position = (0, 5.2, -19)
-camera.look_at(Vec3(0, 2.15, 0))
+camera.look_at(Vec3(0, 2.05, 0))
 camera.fov = 53
 
 ARENA_LIMIT = 7.1
 
-# Éclairage et décor : l'arène reste lisible même avec des couleurs sombres.
-AmbientLight(color=color.rgba(150, 165, 205, 255))
-DirectionalLight(y=8, z=-5, rotation=(35, -30, 0), color=color.rgba(255, 242, 220, 255))
+# Arène colorée avec éclairage doux.
+AmbientLight(color=color.rgba(175, 185, 210, 255))
+DirectionalLight(y=8, z=-5, rotation=(35, -30, 0), color=color.rgba(255, 246, 224, 255))
 Entity(model="cube", position=(0, -.38, 0), scale=(18, .7, 8), color=color.rgb(35, 42, 61))
-Entity(model="cube", position=(0, -.015, 0), scale=(15, .035, 6), color=color.rgb(56, 65, 87))
+Entity(model="cube", position=(0, -.015, 0), scale=(15, .035, 6), color=color.rgb(62, 70, 91))
 for x in (-7.8, 7.8):
-    Entity(model="cube", position=(x, 1, 0), scale=(.22, 2, 6), color=color.rgb(107, 120, 151))
+    Entity(model="cube", position=(x, 1, 0), scale=(.22, 2, 6), color=color.rgb(112, 124, 151))
 for x in range(-7, 8, 2):
-    Entity(model="cube", position=(x, .012, 0), scale=(.025, .02, 5.7), color=color.rgb(83, 94, 120))
-Entity(model="cube", position=(0, 4.2, 4.5), scale=(22, 9, .2), color=color.rgb(22, 28, 47))
+    Entity(model="cube", position=(x, .012, 0), scale=(.025, .02, 5.7), color=color.rgb(99, 108, 130))
+Entity(model="cube", position=(0, 4.2, 4.5), scale=(22, 9, .2), color=color.rgb(26, 31, 51))
 for i in range(10):
-    Entity(model="sphere", position=(-8.7 + i * 1.93, 2.1 + (i % 3) * .5, 4.25), scale=(.27, .27, .14), color=color.rgb(77, 104, 151))
+    Entity(model="sphere", position=(-8.7 + i * 1.93, 2.1 + (i % 3) * .5, 4.25), scale=(.27, .27, .14), color=color.rgb(86, 108, 151))
 
 
-def place_limb(part, start, end, thickness):
-    """Place un segment cylindrique entre deux points locaux du personnage."""
+def set_segment(part, start, end, thickness):
     delta = end - start
-    length = max(delta.length(), .001)
     part.position = (start + end) / 2
-    # Le cylindre Ursina mesure deux unités de haut à l'échelle 1.
-    part.scale = (thickness, length / 2, thickness)
+    part.scale = (thickness, max(delta.length() / 2, .01), thickness)
     part.rotation_z = math.degrees(math.atan2(-delta.x, delta.y))
 
 
 class Fighter:
-    """Stickman stylisé avec segments articulés, accessoires et animations."""
+    """Personnage cartoon aux formes rondes et aux membres colorés articulés."""
 
-    def __init__(self, x, accent, pants, skin, player=False):
+    def __init__(self, x, main_color, player=False):
         self.root = Entity(position=(x, 0, 0))
-        self.accent, self.pants, self.skin = accent, pants, skin
+        self.main_color = main_color
         self.player = player
         self.health = 100
         self.facing = 1 if player else -1
@@ -57,30 +53,30 @@ class Fighter:
         self.blocking = False
         self.move_amount = 0
 
-        ink = color.rgb(24, 27, 38)
-        # Tête cerclée, visage et bandeau coloré : silhouette plus expressive.
-        self.head_outline = Entity(model="sphere", parent=self.root, position=(0, 2.52, 0), scale=(.61, .65, .52), color=ink)
-        self.head = Entity(model="sphere", parent=self.root, position=(0, 2.53, -.035), scale=(.49, .53, .47), color=skin)
-        self.band = Entity(model="cube", parent=self.root, position=(0, 2.77, -.285), scale=(.72, .12, .07), color=accent)
-        for eye_x in (-.15, .15):
-            Entity(model="sphere", parent=self.root, position=(eye_x, 2.55, -.267), scale=(.07, .085, .035), color=ink)
-        self.torso = Entity(model="cylinder", parent=self.root, position=(0, 1.8, 0), scale=(.31, .45, .31), color=ink)
-        self.chest = Entity(model="cube", parent=self.root, position=(0, 1.92, -.17), scale=(.35, .39, .07), color=accent)
-        self.belt = Entity(model="cube", parent=self.root, position=(0, 1.43, -.02), scale=(.39, .11, .33), color=color.rgb(229, 197, 118))
+        outline = color.rgb(28, 29, 43)
+        # Tête ronde surdimensionnée, petit corps « capsule » et couleurs franches.
+        self.head_outline = Entity(model="sphere", parent=self.root, position=(0, 2.45, 0), scale=(.73, .75, .58), color=outline)
+        self.head = Entity(model="sphere", parent=self.root, position=(0, 2.47, -.035), scale=(.64, .66, .57), color=main_color)
+        # Visage simple et lisible, comme un personnage de jeu d'arcade.
+        self.eye_l = Entity(model="sphere", parent=self.root, position=(-.17, 2.53, -.53), scale=(.09, .11, .045), color=color.white)
+        self.eye_r = Entity(model="sphere", parent=self.root, position=(.17, 2.53, -.53), scale=(.09, .11, .045), color=color.white)
+        self.pupil_l = Entity(model="sphere", parent=self.root, position=(-.14, 2.52, -.568), scale=(.045, .06, .025), color=outline)
+        self.pupil_r = Entity(model="sphere", parent=self.root, position=(.20, 2.52, -.568), scale=(.045, .06, .025), color=outline)
+        self.mouth = Entity(model="cube", parent=self.root, position=(.02, 2.29, -.55), scale=(.16, .035, .025), color=outline)
 
-        self.arm_l1 = self.segment(ink); self.arm_l2 = self.segment(ink)
-        self.arm_r1 = self.segment(ink); self.arm_r2 = self.segment(ink)
-        self.leg_l1 = self.segment(ink); self.leg_l2 = self.segment(ink)
-        self.leg_r1 = self.segment(ink); self.leg_r2 = self.segment(ink)
-        self.joints = [Entity(model="sphere", parent=self.root, scale=.18, color=ink) for _ in range(6)]
-        self.glove_l = Entity(model="sphere", parent=self.root, scale=(.23, .22, .2), color=accent)
-        self.glove_r = Entity(model="sphere", parent=self.root, scale=(.23, .22, .2), color=accent)
-        self.boot_l = Entity(model="cube", parent=self.root, scale=(.38, .17, .32), color=pants)
-        self.boot_r = Entity(model="cube", parent=self.root, scale=(.38, .17, .32), color=pants)
+        self.torso_outline = Entity(model="sphere", parent=self.root, position=(0, 1.45, 0), scale=(.62, .92, .48), color=outline)
+        self.torso = Entity(model="sphere", parent=self.root, position=(0, 1.48, -.04), scale=(.53, .83, .48), color=main_color)
+        self.belt = Entity(model="cube", parent=self.root, position=(0, .98, -.28), scale=(.52, .13, .07), color=color.rgb(255, 218, 91))
+
+        # Chaque membre comprend un contour sombre et un segment coloré.
+        self.parts = {}
+        for name in ("arm_l1", "arm_l2", "arm_r1", "arm_r2", "leg_l1", "leg_l2", "leg_r1", "leg_r2"):
+            self.parts[name + "_outline"] = Entity(model="cylinder", parent=self.root, color=outline)
+            self.parts[name] = Entity(model="cylinder", parent=self.root, color=main_color)
+        self.joints = [Entity(model="sphere", parent=self.root, scale=.23, color=main_color) for _ in range(6)]
+        self.hands = [Entity(model="sphere", parent=self.root, scale=(.25, .24, .24), color=main_color) for _ in range(2)]
+        self.feet = [Entity(model="sphere", parent=self.root, scale=(.36, .19, .3), color=outline) for _ in range(2)]
         self.update_pose(0)
-
-    def segment(self, tint):
-        return Entity(model="cylinder", parent=self.root, color=tint)
 
     @property
     def x(self):
@@ -98,53 +94,56 @@ class Fighter:
     def y(self, value):
         self.root.y = value
 
+    def limb(self, name, start, end, thickness):
+        set_segment(self.parts[name + "_outline"], start, end, thickness * 1.42)
+        set_segment(self.parts[name], start, end, thickness)
+
     def update_pose(self, dt):
         if dt:
-            self.walk_time += dt * (11 if abs(self.move_amount) > .01 else 3)
+            self.walk_time += dt * (11 if abs(self.move_amount) > .01 else 2.5)
         stride = math.sin(self.walk_time) * .34 if self.y < .05 else 0
-        bend = -.12 if self.blocking else 0
-        shoulder_l, shoulder_r = Vec3(-.25, 2.12 + bend, 0), Vec3(.25, 2.12 + bend, 0)
-        hip_l, hip_r = Vec3(-.14, 1.42, 0), Vec3(.14, 1.42, 0)
-        knee_l, knee_r = Vec3(-.18 + stride, .77, 0), Vec3(.18 - stride, .77, 0)
-        ankle_l, ankle_r = Vec3(-.2 - stride * .58, .17, 0), Vec3(.2 + stride * .58, .17, 0)
+        shoulder_l, shoulder_r = Vec3(-.34, 1.95, 0), Vec3(.34, 1.95, 0)
+        hip_l, hip_r = Vec3(-.2, 1.02, 0), Vec3(.2, 1.02, 0)
+        knee_l, knee_r = Vec3(-.2 + stride, .58, 0), Vec3(.2 - stride, .58, 0)
+        ankle_l, ankle_r = Vec3(-.2 - stride * .55, .16, 0), Vec3(.2 + stride * .55, .16, 0)
 
         if self.attack_timer > 0:
-            fist = Vec3(self.facing * 1.03, 2.02, -.03)
-            elbow = Vec3(self.facing * .55, 2.13, 0)
-            idle_hand = Vec3(-self.facing * .5, 1.8 + bend, 0)
-            idle_elbow = Vec3(-self.facing * .42, 1.97 + bend, 0)
+            fist = Vec3(self.facing * 1.02, 1.98, -.05)
+            elbow = Vec3(self.facing * .59, 2.03, 0)
+            resting_elbow = Vec3(-self.facing * .42, 1.72, 0)
+            resting_hand = Vec3(-self.facing * .5, 1.45, 0)
             if self.facing > 0:
-                arm_points = ((shoulder_l, idle_elbow, idle_hand), (shoulder_r, elbow, fist))
+                arms = ((shoulder_l, resting_elbow, resting_hand), (shoulder_r, elbow, fist))
             else:
-                arm_points = ((shoulder_l, elbow, fist), (shoulder_r, idle_elbow, idle_hand))
+                arms = ((shoulder_l, elbow, fist), (shoulder_r, resting_elbow, resting_hand))
         elif self.blocking:
-            arm_points = ((shoulder_l, Vec3(-.25, 2.35, 0), Vec3(-.12, 2.47, -.08)),
-                          (shoulder_r, Vec3(.25, 2.35, 0), Vec3(.12, 2.47, -.08)))
+            arms = ((shoulder_l, Vec3(-.38, 2.18, 0), Vec3(-.12, 2.37, -.08)),
+                    (shoulder_r, Vec3(.38, 2.18, 0), Vec3(.12, 2.37, -.08)))
         else:
-            arm_points = ((shoulder_l, Vec3(-.43 + stride * .25, 1.86, 0), Vec3(-.5 + stride * .35, 1.58, 0)),
-                          (shoulder_r, Vec3(.43 - stride * .25, 1.86, 0), Vec3(.5 - stride * .35, 1.58, 0)))
+            arms = ((shoulder_l, Vec3(-.48 + stride * .2, 1.64, 0), Vec3(-.52 + stride * .3, 1.34, 0)),
+                    (shoulder_r, Vec3(.48 - stride * .2, 1.64, 0), Vec3(.52 - stride * .3, 1.34, 0)))
 
-        for seg, (start, elbow, hand) in zip((self.arm_l1, self.arm_l2, self.arm_r1, self.arm_r2),
-                                              (arm_points[0][0:2], arm_points[0][1:3], arm_points[1][0:2], arm_points[1][1:3])):
-            place_limb(seg, start, elbow, .095) if seg in (self.arm_l1, self.arm_r1) else place_limb(seg, elbow, hand, .085)
-        self.glove_l.position = arm_points[0][2]
-        self.glove_r.position = arm_points[1][2]
+        for side, (shoulder, elbow, hand) in zip(("l", "r"), arms):
+            self.limb(f"arm_{side}1", shoulder, elbow, .16)
+            self.limb(f"arm_{side}2", elbow, hand, .14)
+            self.hands[0 if side == "l" else 1].position = hand
+        for side, hip, knee, ankle in (("l", hip_l, knee_l, ankle_l), ("r", hip_r, knee_r, ankle_r)):
+            self.limb(f"leg_{side}1", hip, knee, .18)
+            self.limb(f"leg_{side}2", knee, ankle, .15)
 
-        for seg, start, end in ((self.leg_l1, hip_l, knee_l), (self.leg_l2, knee_l, ankle_l),
-                                (self.leg_r1, hip_r, knee_r), (self.leg_r2, knee_r, ankle_r)):
-            place_limb(seg, start, end, .105 if seg in (self.leg_l1, self.leg_r1) else .09)
-        self.boot_l.position = ankle_l + Vec3(self.facing * .12, -.04, 0)
-        self.boot_r.position = ankle_r + Vec3(self.facing * .12, -.04, 0)
-        points = (shoulder_l, shoulder_r, hip_l, hip_r, knee_l, knee_r)
-        for joint, point in zip(self.joints, points):
+        for joint, point in zip(self.joints, (shoulder_l, shoulder_r, hip_l, hip_r, knee_l, knee_r)):
             joint.position = point
-        self.torso.color = color.white if self.hit_flash > 0 else color.rgb(24, 27, 38)
-        self.chest.color = color.white if self.hit_flash > 0 else self.accent
-        self.band.color = color.white if self.hit_flash > 0 else self.accent
+        self.feet[0].position = ankle_l + Vec3(self.facing * .1, -.02, -.02)
+        self.feet[1].position = ankle_r + Vec3(self.facing * .1, -.02, -.02)
+        if self.hit_flash > 0:
+            self.head.color = self.torso.color = color.white
+        else:
+            self.head.color = self.torso.color = self.main_color
+        self.head.y = 2.47 + (.025 * math.sin(self.walk_time * 2) if self.move_amount else 0)
 
 
-player = Fighter(-3.2, color.rgb(45, 170, 255), color.rgb(32, 54, 112), color.rgb(246, 194, 150), True)
-enemy = Fighter(3.2, color.rgb(255, 72, 91), color.rgb(112, 31, 57), color.rgb(219, 160, 119))
+player = Fighter(-3.2, color.rgb(43, 171, 255), True)
+enemy = Fighter(3.2, color.rgb(255, 76, 100))
 
 Text("JOUEUR", parent=camera.ui, position=(-.69, .405), scale=1, color=color.rgb(105, 199, 255))
 Text("ADVERSAIRE", parent=camera.ui, position=(.38, .405), scale=1, color=color.rgb(255, 117, 127))
@@ -153,8 +152,8 @@ Entity(parent=camera.ui, model="quad", position=(.39, .365), scale=(.43, .035), 
 player_bar = Entity(parent=camera.ui, model="quad", position=(-.39, .365, -.01), scale=(.43, .025), color=color.rgb(71, 225, 133))
 enemy_bar = Entity(parent=camera.ui, model="quad", position=(.39, .365, -.01), scale=(.43, .025), color=color.rgb(255, 75, 93))
 score_label = Text("Victoires : 0", parent=camera.ui, position=(-.86, .46), scale=.9, color=color.white)
-help_label = Text("A / D ou ← / → : bouger     ESPACE : sauter     J : frapper     K : bloquer", parent=camera.ui,
-                  origin=(0, 0), position=(0, -.46), scale=.8, color=color.white)
+Text("A / D ou ← / → : bouger     ESPACE : sauter     J : frapper     K : bloquer", parent=camera.ui,
+     origin=(0, 0), position=(0, -.46), scale=.8, color=color.white)
 message = Text("", parent=camera.ui, origin=(0, 0), position=(0, .08), scale=2.2, color=color.rgb(255, 218, 91))
 
 wins = 0
