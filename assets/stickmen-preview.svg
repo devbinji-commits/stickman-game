@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Stickman Arena — aperçu des personnages</title>
+  <desc id="desc">Deux combattants stickman stylisés, bleu et rouge, dans une arène sombre.</desc>
+  <defs>
+    <linearGradient id="bg" x2="0" y2="1"><stop stop-color="#11182b"/><stop offset="1" stop-color="#27324b"/></linearGradient>
+    <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#46516a"/><stop offset="1" stop-color="#252d42"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="620" rx="28" fill="url(#bg)"/>
+  <path d="M0 400h1200v220H0z" fill="url(#floor)"/>
+  <path d="M0 400h1200M90 400v220m170-220v220m170-220v220m170-220v220m170-220v220m170-220v220m170-220v220" stroke="#7c8aa9" stroke-opacity=".25" stroke-width="3"/>
+  <text x="600" y="72" text-anchor="middle" fill="#f5d477" font-family="Arial,sans-serif" font-size="36" font-weight="700" letter-spacing="5">STICKMAN ARENA</text>
+  <text x="600" y="112" text-anchor="middle" fill="#aebbd4" font-family="Arial,sans-serif" font-size="17">Deux combattants articulés • Ursina • sans Pygame</text>
+  <g transform="translate(390 0)" stroke="#171b29" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 280L-5 360" stroke-width="35"/><path d="M-5 360L-40 435M-5 360L35 435" stroke-width="21"/>
+    <path d="M-12 298L-70 333L-95 375" stroke-width="19"/><path d="M8 298L65 280L130 270" stroke-width="19"/>
+    <path d="M-40 435L-60 440M35 435L55 440" stroke-width="18"/>
+    <circle cx="0" cy="211" r="53" fill="#f3c49d" stroke-width="13"/>
+    <path d="M-49 199Q0 135 49 199" fill="#2daaff" stroke="#171b29" stroke-width="13"/>
+    <path d="M-13 207h4m24 0h4" stroke="#171b29" stroke-width="8"/>
+    <path d="M-4 281L-6 347" stroke="#2daaff" stroke-width="23"/>
+    <path d="M-95 375l-8 12M130 270l15-3" stroke="#2daaff" stroke-width="20"/>
+    <circle cx="-5" cy="360" r="13" fill="#d5e0f0"/><circle cx="-40" cy="435" r="12" fill="#d5e0f0"/><circle cx="35" cy="435" r="12" fill="#d5e0f0"/>
+  </g>
+  <g transform="translate(810 0) scale(-1 1)" stroke="#171b29" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 280L-5 360" stroke-width="35"/><path d="M-5 360L-40 435M-5 360L35 435" stroke-width="21"/>
+    <path d="M-12 298L-65 280L-125 268" stroke-width="19"/><path d="M8 298L68 330L91 373" stroke-width="19"/>
+    <path d="M-40 435L-60 440M35 435L55 440" stroke-width="18"/>
+    <circle cx="0" cy="211" r="53" fill="#dba77d" stroke-width="13"/>
+    <path d="M-49 199Q0 135 49 199" fill="#ff485b" stroke="#171b29" stroke-width="13"/>
+    <path d="M-13 207h4m24 0h4" stroke="#171b29" stroke-width="8"/>
+    <path d="M-4 281L-6 347" stroke="#ff485b" stroke-width="23"/>
+    <path d="M-125 268l-15-3M91 373l8 13" stroke="#ff485b" stroke-width="20"/>
+    <circle cx="-5" cy="360" r="13" fill="#d5e0f0"/><circle cx="-40" cy="435" r="12" fill="#d5e0f0"/><circle cx="35" cy="435" r="12" fill="#d5e0f0"/>
+  </g>
+  <g font-family="Arial,sans-serif" font-weight="700" font-size="18">
+    <text x="390" y="500" text-anchor="middle" fill="#73c7ff">JOUEUR</text>
+    <text x="810" y="500" text-anchor="middle" fill="#ff7886">ADVERSAIRE</text>
+  </g>
+  <g transform="translate(215 535)"><rect width="330" height="18" rx="9" fill="#364156"/><rect width="292" height="18" rx="9" fill="#47df88"/><rect x="655" width="330" height="18" rx="9" fill="#364156"/><rect x="655" width="250" height="18" rx="9" fill="#ff5368"/></g>
+  <text x="600" y="590" text-anchor="middle" fill="#d2d9e8" font-family="Arial,sans-serif" font-size="16">A / D : bouger   •   ESPACE : sauter   •   J : frapper   •   K : bloquer</text>
+</svg>

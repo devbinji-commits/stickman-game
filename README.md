@@ -1,8 +1,10 @@
 # Stickman Arena — Ursina
 
-Un petit jeu de combat local en 2.5D fait avec **Ursina**. Deux personnages stickman articulés (tête, bras, jambes, vêtements et visage) se battent dans une arène. L'adversaire est contrôlé par une IA simple. Le projet n'utilise **pas Pygame** et ne nécessite aucune image externe.
+Un jeu de combat local en 2.5D avec deux personnages stickman articulés, des coups, un saut, un blocage, une IA adverse et des barres de vie. Le jeu est construit en 3D avec Ursina, sans Pygame et sans images externes.
 
-## Installation
+![Aperçu des stickmen bleu et rouge dans l'arène](https://raw.githubusercontent.com/devbinji-commits/stickman-game/main/assets/stickmen-preview.svg)
+
+## Installation et lancement
 
 Prérequis : Python 3.9 ou plus récent.
 
@@ -16,7 +18,7 @@ python main.py
 - **A / D** ou **← / →** : se déplacer
 - **Espace** : sauter
 - **J** ou **F** : frapper
-- **K** ou **Maj** : bloquer
+- **K** ou **Maj** : bloquer (maintenir)
 - **Échap** : quitter
 
-Les barres de vie indiquent l'état des combattants. Après une victoire ou une défaite, le round suivant démarre automatiquement.
+Les personnages ont une tête expressive, un bandeau, un haut coloré, des gants, des articulations et des bottes. Après une victoire ou une défaite, le round suivant démarre automatiquement.
